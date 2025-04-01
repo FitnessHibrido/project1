@@ -1,5 +1,16 @@
-import { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Image, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  ActivityIndicator,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
@@ -14,14 +25,28 @@ export default function LoginScreen() {
   const router = useRouter();
   const { signIn } = useAuth();
 
+  useEffect(() => {
+    setEmail('');
+    setPassword('');
+    setError(null);
+  }, []);
+
   const handleLogin = async () => {
+    if (!email || !password) {
+      setError('Por favor completa todos los campos.');
+      return;
+    }
+
     try {
       setError(null);
       setLoading(true);
       await signIn(email, password);
       router.replace('/(tabs)/profile');
     } catch (err) {
-      setError('Credenciales inválidas. Por favor, inténtalo de nuevo.');
+      const msg = err instanceof Error
+        ? err.message
+        : 'Credenciales inválidas. Por favor, inténtalo de nuevo.';
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -29,14 +54,16 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.header}>
             <Image
-              source={{ uri: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=800&q=80' }}
+              source={{
+                uri: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=800&q=80',
+              }}
               style={styles.headerImage}
             />
             <View style={styles.overlay} />
@@ -81,7 +108,7 @@ export default function LoginScreen() {
                   secureTextEntry={!showPassword}
                   editable={!loading}
                 />
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={() => setShowPassword(!showPassword)}
                   style={styles.eyeButton}
                 >
@@ -94,7 +121,7 @@ export default function LoginScreen() {
               </View>
             </View>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.forgotPassword}
               onPress={() => router.push('/forgot-password')}
               disabled={loading}
@@ -102,22 +129,21 @@ export default function LoginScreen() {
               <Text style={styles.forgotPasswordText}>¿Olvidaste tu contraseña?</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.loginButton, loading && styles.loginButtonDisabled]}
               onPress={handleLogin}
               disabled={loading}
             >
-              <Text style={styles.loginButtonText}>
-                {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
-              </Text>
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.loginButtonText}>Iniciar Sesión</Text>
+              )}
             </TouchableOpacity>
 
             <View style={styles.registerContainer}>
               <Text style={styles.registerText}>¿No tienes una cuenta?</Text>
-              <TouchableOpacity 
-                onPress={() => router.push('/register')}
-                disabled={loading}
-              >
+              <TouchableOpacity onPress={() => router.push('/register')} disabled={loading}>
                 <Text style={styles.registerLink}>Regístrate</Text>
               </TouchableOpacity>
             </View>

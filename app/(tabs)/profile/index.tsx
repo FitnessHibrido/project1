@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Settings, Crown, ChevronRight, Scale, Clock, Weight, Trophy } from 'lucide-react-native';
@@ -6,6 +6,7 @@ import { useProfile } from '@/context/ProfileContext';
 import { useAuth } from '@/context/AuthContext';
 import { usePerformance } from '@/hooks/usePerformance';
 import { useSubscription } from '@/hooks/useSubscription';
+import * as InAppPurchases from 'expo-in-app-purchases';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -15,6 +16,34 @@ export default function ProfileScreen() {
   const { signOut } = useAuth();
 
   const loading = profileLoading || performanceLoading || subscriptionLoading;
+
+  const productId = Platform.OS === 'ios' ? 'ios_product_id' : 'android_product_id';
+
+  const handlePayment = async () => {
+    setLoading(true);
+    try {
+      const { responseCode, results } = await InAppPurchases.getProductsAsync([productId]);
+
+      if (responseCode === InAppPurchases.IAPResponseCode.OK && results.length > 0) {
+        const { responseCode: purchaseResponse } = await InAppPurchases.purchaseItemAsync(productId);
+
+        if (purchaseResponse === InAppPurchases.IAPResponseCode.OK) {
+          // Validar recibo en el backend
+          router.push('/profile/payment/success');
+        } else {
+          console.error('Error en la compra:', purchaseResponse);
+          router.push('/profile/payment/error');
+        }
+      } else {
+        console.error('No se encontraron productos o hubo un error en la respuesta.');
+      }
+    } catch (error) {
+      console.error('Error procesando el pago:', error);
+      router.push('/profile/payment/error');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (loading || !profile) {
     return (
@@ -41,7 +70,7 @@ export default function ProfileScreen() {
       id: 1,
       title: 'Tiempo Total',
       value: `${metrics.totalTime}min`,
-      change: '+2h esta semana',
+      change: '',
       icon: Clock,
       color: '#3B82F6',
       bgColor: '#EFF6FF',
@@ -50,7 +79,7 @@ export default function ProfileScreen() {
       id: 2,
       title: 'Volumen Total',
       value: `${metrics.totalVolume.toLocaleString()}kg`,
-      change: '+150kg vs anterior',
+      change: '',
       icon: Weight,
       color: '#22C55E',
       bgColor: '#F0FDF4',
@@ -59,7 +88,7 @@ export default function ProfileScreen() {
       id: 3,
       title: 'PRs',
       value: `${metrics.personalRecords} PRs`,
-      change: '3 esta semana',
+      change: '',
       icon: Trophy,
       color: '#F59E0B',
       bgColor: '#FFFBEB',

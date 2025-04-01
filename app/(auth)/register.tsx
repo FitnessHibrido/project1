@@ -1,5 +1,16 @@
-import { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Image, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  ActivityIndicator,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Mail, Lock, Eye, EyeOff, User, ArrowLeft } from 'lucide-react-native';
@@ -16,18 +27,33 @@ export default function RegisterScreen() {
   const router = useRouter();
   const { signUp } = useAuth();
 
+  useEffect(() => {
+    setName('');
+    setEmail('');
+    setPassword('');
+    setConfirmPassword('');
+    setError(null);
+  }, []);
+
   const handleRegister = async () => {
+    if (!name || !email || !password || !confirmPassword) {
+      setError('Completa todos los campos.');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError('Las contraseñas no coinciden.');
+      return;
+    }
+
     try {
-      setError(null);
-      if (password !== confirmPassword) {
-        setError('Las contraseñas no coinciden');
-        return;
-      }
       setLoading(true);
+      setError(null);
       await signUp(email, password, name);
       router.replace('/(tabs)/profile');
     } catch (err) {
-      setError('Error al crear la cuenta. Por favor, inténtalo de nuevo.');
+      const msg = err instanceof Error ? err.message : 'Error al crear la cuenta.';
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -35,7 +61,7 @@ export default function RegisterScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
@@ -46,7 +72,7 @@ export default function RegisterScreen() {
               style={styles.headerImage}
             />
             <View style={styles.overlay} />
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.backButton}
               onPress={() => router.back()}
               disabled={loading}
@@ -109,7 +135,7 @@ export default function RegisterScreen() {
                   secureTextEntry={!showPassword}
                   editable={!loading}
                 />
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={() => setShowPassword(!showPassword)}
                   style={styles.eyeButton}
                 >
@@ -137,19 +163,21 @@ export default function RegisterScreen() {
               </View>
             </View>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.registerButton, loading && styles.registerButtonDisabled]}
               onPress={handleRegister}
               disabled={loading}
             >
-              <Text style={styles.registerButtonText}>
-                {loading ? 'Creando cuenta...' : 'Crear Cuenta'}
-              </Text>
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.registerButtonText}>Crear Cuenta</Text>
+              )}
             </TouchableOpacity>
 
             <View style={styles.loginContainer}>
               <Text style={styles.loginText}>¿Ya tienes una cuenta?</Text>
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={() => router.push('/login')}
                 disabled={loading}
               >

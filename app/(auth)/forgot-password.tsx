@@ -1,5 +1,15 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Image, KeyboardAvoidingView, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Mail, ArrowLeft, CircleCheck as CheckCircle } from 'lucide-react-native';
@@ -9,16 +19,29 @@ export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { resetPassword } = useAuth();
 
   const handleResetPassword = async () => {
+    if (!email.trim()) {
+      setError('Introduce una dirección de correo válida.');
+      return;
+    }
+
     try {
       setError(null);
+      setLoading(true);
       await resetPassword(email);
       setSuccess(true);
+      setEmail('');
     } catch (err) {
-      setError('No se pudo enviar el email de recuperación. Verifica tu dirección de correo.');
+      const msg = err instanceof Error
+        ? err.message
+        : 'No se pudo enviar el email de recuperación.';
+      setError(msg);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -31,7 +54,7 @@ export default function ForgotPasswordScreen() {
           <Text style={styles.successText}>
             Hemos enviado un enlace de recuperación a tu correo electrónico. Sigue las instrucciones para restablecer tu contraseña.
           </Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.backToLoginButton}
             onPress={() => router.push('/login')}
           >
@@ -44,7 +67,7 @@ export default function ForgotPasswordScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
@@ -54,10 +77,7 @@ export default function ForgotPasswordScreen() {
             style={styles.headerImage}
           />
           <View style={styles.overlay} />
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <ArrowLeft size={24} color="#FFFFFF" />
           </TouchableOpacity>
           <View style={styles.headerContent}>
@@ -86,21 +106,24 @@ export default function ForgotPasswordScreen() {
                 onChangeText={setEmail}
                 autoCapitalize="none"
                 keyboardType="email-address"
+                editable={!loading}
               />
             </View>
           </View>
 
-          <TouchableOpacity 
-            style={styles.resetButton}
+          <TouchableOpacity
+            style={[styles.resetButton, loading && styles.resetButtonDisabled]}
             onPress={handleResetPassword}
+            disabled={loading}
           >
-            <Text style={styles.resetButtonText}>Enviar Instrucciones</Text>
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.resetButtonText}>Enviar Instrucciones</Text>
+            )}
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={styles.cancelButton}
-            onPress={() => router.back()}
-          >
+          <TouchableOpacity style={styles.cancelButton} onPress={() => router.back()} disabled={loading}>
             <Text style={styles.cancelButtonText}>Cancelar</Text>
           </TouchableOpacity>
         </View>
@@ -202,6 +225,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     marginBottom: 12,
+  },
+  resetButtonDisabled: {
+    opacity: 0.7,
   },
   resetButtonText: {
     color: '#FFFFFF',

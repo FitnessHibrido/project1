@@ -1,9 +1,10 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Play, X } from 'lucide-react-native';
+import { WebView } from 'react-native-webview'; // Importar WebView
 
 interface Exercise {
   id: string;
@@ -118,16 +119,16 @@ export default function VideoCategoryScreen() {
               <X size={24} color="#FFFFFF" />
             </TouchableOpacity>
             {selectedVideo && (
-              <iframe
-                src={`${selectedVideo}?autoplay=true&loop=false&muted=false&preload=true&responsive=true`}
+              <WebView
+                source={{ uri: `${selectedVideo}?autoplay=true&loop=false&muted=false&preload=true&responsive=true` }}
                 style={{
                   width: '100%',
                   height: '100%',
-                  border: 'none',
                   borderRadius: 12,
                 }}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
+                allowsFullscreenVideo={true}
+                javaScriptEnabled={true}
+                domStorageEnabled={true}
               />
             )}
           </View>

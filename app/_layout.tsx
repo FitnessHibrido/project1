@@ -2,22 +2,24 @@ import { useEffect, useState } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
-import { AuthProvider } from '@/context/AuthContext';
+import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { ProfileProvider } from '@/context/ProfileContext';
-import { useAuth } from '@/context/AuthContext';
+import { View, ActivityIndicator } from 'react-native';
 
 function RootLayoutNav() {
   const { user, loading } = useAuth();
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    if (!loading) {
-      setIsReady(true);
-    }
+    if (!loading) setIsReady(true);
   }, [loading]);
 
   if (!isReady || loading) {
-    return null;
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#3B82F6" />
+      </View>
+    );
   }
 
   return (

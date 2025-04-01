@@ -1,4 +1,11 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+  useMemo,
+} from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { Database } from '@/types/database';
@@ -11,6 +18,7 @@ interface ProfileContextType {
   loading: boolean;
   error: string | null;
   updateProfile: (data: ProfileUpdate) => Promise<void>;
+  fetchProfile: () => Promise<void>;
 }
 
 const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
@@ -21,45 +29,51 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const fetchProfile = async () => {
+    if (!user?.id) {
+      setProfile(null);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const { data, error: fetchError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (fetchError) throw fetchError;
+      setProfile(data);
+    } catch (err) {
+      console.error('Error fetching profile:', err);
+      setError(err instanceof Error ? err.message : 'Error al cargar el perfil');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    if (!user?.id) return;
-
-    const fetchProfile = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const { data, error: fetchError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-
-        if (fetchError) throw fetchError;
-        setProfile(data);
-      } catch (err) {
-        console.error('Error fetching profile:', err);
-        setError(err instanceof Error ? err.message : 'Error al cargar el perfil');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchProfile();
   }, [user?.id]);
 
   const updateProfile = async (updates: ProfileUpdate) => {
+    if (!user?.id) throw new Error('No hay usuario autenticado');
+
     try {
       setError(null);
 
       const { error: updateError } = await supabase
         .from('profiles')
         .update(updates)
-        .eq('id', user?.id);
+        .eq('id', user.id);
 
       if (updateError) throw updateError;
 
-      setProfile(prev => prev ? { ...prev, ...updates } : null);
+      await fetchProfile(); // Refresca el perfil completo
     } catch (err) {
       console.error('Error updating profile:', err);
       setError(err instanceof Error ? err.message : 'Error al actualizar el perfil');
@@ -67,12 +81,13 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const value = {
+  const value = useMemo(() => ({
     profile,
     loading,
     error,
     updateProfile,
-  };
+    fetchProfile,
+  }), [profile, loading, error]);
 
   return (
     <ProfileContext.Provider value={value}>
